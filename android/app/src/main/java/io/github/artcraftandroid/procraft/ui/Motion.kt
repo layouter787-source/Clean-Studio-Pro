@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -199,6 +200,9 @@ object Motion {
     fun blendClose(): androidx.compose.animation.core.FiniteAnimationSpec<Float> = tween(BLEND_CLOSE_MS.toInt(), easing = EaseInOut)
     fun blendCloseSize(): androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntSize> = tween(BLEND_CLOSE_MS.toInt(), easing = EaseInOut)
     fun blendRowsBack(): AnimationSpec<Float> = tween(120, easing = EaseInOut)
+    fun blendSnap(): AnimationSpec<Float> = tween(180, easing = EaseInOut)
+    fun blendScroll(rows: Float): AnimationSpec<Float> =
+        tween((300 + 40 * rows).roundToInt().coerceAtMost(600), easing = EaseInOut)
 
 
     /**

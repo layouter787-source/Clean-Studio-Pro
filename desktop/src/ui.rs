@@ -845,7 +845,7 @@ impl Interface {
         // its rows not showing, held layers find none to drop on
         let layers_floating = self.floating.shown(procraft_core::FloatingPanel::Layers).is_some();
         if (self.open != Some(Popover::Layers) || self.background_pick.is_some()) && !layers_floating {
-            self.layers.closed();
+            self.layers.closed(session);
         }
         // the background's colour is kept, however its panel closed
         if self.open != Some(Popover::Layers) {

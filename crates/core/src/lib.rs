@@ -899,6 +899,9 @@ impl State {
         self.end_adjustment(true);
         let name = self.pending_name.take();
         if let (Some(before), Some(canvas)) = (self.pending_doc.take(), self.canvas.as_mut()) {
+            if name.as_deref() == Some(layers::BLEND_MODE_STEP) && before == self.doc {
+                return;
+            }
             if let Some(name) = name {
                 canvas.name_next_step(&name);
             }

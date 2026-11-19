@@ -1071,7 +1071,9 @@ fn make_shapes() -> Vec<GrayImage> {
             pixels: field(|x, y| {
                 // five rounded petals round a paler middle
                 let (u, v) = centred(x, y);
-                let (r, a) = ((u * u + v * v).sqrt(), v.atan2(u) + FRAC_PI_2);
+                let r = (u * u + v * v).sqrt();
+                // Round the angle to f32 after atan2 so the exported tip matches across platforms.
+                let a = f64::from(v).atan2(f64::from(u)) as f32 + FRAC_PI_2;
                 let petal = (a * 2.5).cos().abs();
                 let body = smooth((0.3 + 0.6 * petal.sqrt() - r) * 25.0);
                 let middle = 1.0 - 0.45 * smooth((0.2 - r) * 20.0);

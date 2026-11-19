@@ -1993,6 +1993,30 @@ fn layers_change_undoably() {
 }
 
 #[test]
+fn blend_picker_updates_live_and_keeps_one_undo_step() {
+    use procraft_engine::document::BlendMode;
+
+    let Some(s) = session(32, 32) else { return };
+    let id = s.layers()[0].id;
+    let mode = || s.layers()[0].blend;
+    for blend in [BlendMode::Multiply, BlendMode::Darken, BlendMode::Screen] {
+        assert!(s.preview_layer_blend(id, blend.id()));
+        assert_eq!(mode(), blend.id());
+    }
+    assert!(s.finish_layer_blend());
+    assert_eq!(s.undo().as_deref(), Some("blend mode"));
+    assert_eq!(mode(), BlendMode::Normal.id());
+    assert_eq!(s.redo().as_deref(), Some("blend mode"));
+    assert_eq!(mode(), BlendMode::Screen.id());
+
+    assert!(s.preview_layer_blend(id, BlendMode::Multiply.id()));
+    assert!(s.preview_layer_blend(id, BlendMode::Screen.id()));
+    assert!(s.finish_layer_blend());
+    assert_eq!(s.undo().as_deref(), Some("blend mode"));
+    assert_eq!(mode(), BlendMode::Normal.id(), "a round trip adds no step");
+}
+
+#[test]
 fn merge_duplicate_blend_and_locks() {
     let Some(s) = session(100, 100) else { return };
     let bottom = s.layers()[0].id;
@@ -2526,11 +2550,12 @@ fn prediction_is_drawn_but_never_kept() {
 /// two, are those of a stroke that works it out at each sample.
 #[test]
 fn what_runs_ahead_of_a_predicted_stroke_shows_as_worked_out_at_each_sample() {
+    let Ok(gpu) = Gpu::headless() else { return eprintln!("skipped: no GPU") };
     let mut tipped = 0;
     for name in ["Merlin", "Tundra", "Belvedere", "Shannon", "Studio Pen", "Soft Airbrush"] {
         let mut shows_tip = false;
         let pictures = [true, false].map(|predicting| {
-            let Some(s) = session(300, 120) else { return Vec::new() };
+            let s = session_on(gpu.clone(), 300, 120);
             let Some((set, index)) = library_brush(&s, |b| b.name == name) else { return Vec::new() };
             assert!(s.select_brush(set, index));
             s.set_brush_size(0.3);

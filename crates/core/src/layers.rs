@@ -5,6 +5,8 @@ use procraft_engine::document::{BlendMode, Document, LayerId, LayerKind, Place, 
 
 use crate::CanvasSession;
 
+pub(crate) const BLEND_MODE_STEP: &str = "blend mode";
+
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct LayerInfo {
     pub id: u64,
@@ -1041,10 +1043,29 @@ impl CanvasSession {
     /// `blend` is a blend mode id (see [`blend_modes`]).
     pub fn set_layer_blend(&self, id: u64, blend: u32) -> bool {
         let Some(mode) = BlendMode::from_id(blend) else { return false };
-        self.change("blend mode", |d| {
+        self.change(BLEND_MODE_STEP, |d| {
             changed(d, id, |l| l.blend != mode).then(|| d.set_blend(LayerId(id), mode)).filter(|ok| *ok).map(|_| ())
         })
         .is_some()
+    }
+
+    /// Apply a centered mode immediately, keeping the picker movement as one undo step.
+    pub fn preview_layer_blend(&self, id: u64, blend: u32) -> bool {
+        let Some(mode) = BlendMode::from_id(blend) else { return false };
+        self.change_live(BLEND_MODE_STEP, false, |d| {
+            changed(d, id, |l| l.blend != mode) && d.set_blend(LayerId(id), mode)
+        })
+    }
+
+    /// Finish the current blend picker movement, if it changed a mode.
+    pub fn finish_layer_blend(&self) -> bool {
+        let mut st = self.shared.lock();
+        if st.pending_name.as_deref() != Some(BLEND_MODE_STEP) {
+            return false;
+        }
+        st.settle();
+        self.shared.frame(&mut st);
+        true
     }
 
     /// Turns layer `id`'s alpha lock on or off: one step, named as measured ("Undo Alpha Lock on").
@@ -1339,6 +1360,9 @@ impl CanvasSession {
         let mut guard = self.shared.lock();
         let st = &mut *guard;
         st.finish_stroke();
+        if st.pending_name.as_deref() != Some(name) && (st.pending_doc.is_some() || name == BLEND_MODE_STEP) {
+            st.settle();
+        }
         let before = st.doc.clone();
         if !f(&mut st.doc) {
             return false;
