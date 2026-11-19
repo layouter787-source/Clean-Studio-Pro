@@ -625,6 +625,22 @@ impl CanvasSession {
         true
     }
 
+    /// The pen's barrel rolled `turn` radians with the liquify brush at window point (`x`, `y`): a
+    /// twirl turns as far with it, right or left as the barrel went. False if `brush` isn't a twirl.
+    pub fn liquify_rolled(&self, x: f32, y: f32, turn: f32, mut brush: LiquifyBrush) -> bool {
+        if !matches!(brush.kind, LiquifyKind::TwirlRight | LiquifyKind::TwirlLeft) {
+            return false;
+        }
+        brush.kind = if turn > 0.0 { LiquifyKind::TwirlRight } else { LiquifyKind::TwirlLeft };
+        let mut guard = self.shared.lock();
+        let st = &mut *guard;
+        let Some(view) = st.view else { return true };
+        let Some(at) = view.screen_to_canvas(Vec2::new(x, y)).filter(|p| p.is_finite()) else { return true };
+        let steps = st.liquify.rolled(at, turn.abs(), brush);
+        self.shared.lay_liquify(st, steps);
+        true
+    }
+
     /// The liquify brush lifts: it carries on as it was going, for as long as `momentum` (0..1)
     /// lets it. True if something goes on, which needs [`CanvasSession::liquify_tick`].
     pub fn liquify_lift(&self, momentum: f32, brush: LiquifyBrush) -> bool {

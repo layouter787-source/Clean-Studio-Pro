@@ -930,6 +930,18 @@ impl CanvasSession {
         self.liquify_held(x, y, from, to, brush)
     }
 
+    /// The pen's barrel rolled `turn` radians with the liquify brush at window point (`x`, `y`):
+    /// a twirl turns with it.
+    pub fn adjustment_liquify_rolled(&self, x: f32, y: f32, turn: f32) {
+        let brush = self.adjusting(|a, _| a.liquify_brush());
+        if self.liquify_rolled(x, y, turn, brush) {
+            self.adjusting(|a, _| {
+                a.liquified = true;
+                a.touched = true;
+            });
+        }
+    }
+
     /// The liquify brush lifts: true if it, or what it threw off, goes on.
     pub fn adjustment_liquify_lift(&self) -> bool {
         let (brush, momentum) = self.adjusting(|a, _| (a.liquify_brush(), a.liquify_momentum()));
